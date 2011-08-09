@@ -12,8 +12,10 @@ meniac> quit
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <sys/types.h>
 #include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/user.h>
+#include <libutil.h>
 #include <errno.h>
 
 #define PTRACE_ARG3_T caddr_t
@@ -27,10 +29,12 @@ meniac> quit
 #define TP_UINT32 4
 #define TP_UINT64 8
 
-#define omnisearch(type) while(fgets(str,1024,fp)!=0){			\
-	sscanf(str,"%x%x%s%s%s%s%s%s%s%s%s%s%s",&start,&end,null,null,null,null,null,null,null,null,null,null,path);	\
-	if(strncmp("/lib",path,4)==0 || strncmp("/usr/lib",path,8)==0 || strncmp("/usr/local/lib",path,14)==0){		\
-		printf("Skipping %s section\n",path);		\
+#define omnisearch(type) for(i=0;i<cnt;++i){			\
+	kve = &freep[i];					\
+	start=(void *)kve->kve_start;					\
+	end=(void *)kve->kve_end;					\
+	if(strncmp("/lib",kve->kve_path,4)==0 || strncmp("/usr/lib",kve->kve_path,8)==0 || strncmp("/usr/local/lib",kve->kve_path,14)==0){		\
+		printf("Skipping %s section\n",kve->kve_path);		\
 		continue;						\
 	}							\
 	for(ptr=start;ptr<end;++ptr){				\
@@ -70,7 +74,7 @@ typedef union {
 } block;
 
 struct addrlist_u {
-	int addr;
+	void *addr;
 	block value;
 	struct addrlist_u * next;
 };
@@ -79,7 +83,7 @@ typedef struct addrlist_u addrlist;
 
 int print();
 int search();
-int addlist(int addr, block data);
+int addlist(void *addr, block data);
 int dellist(addrlist *ptr);
 int set();
 int reset();
@@ -90,7 +94,8 @@ int tracing=0;
 struct ptrace_io_desc ioreq;
 addrlist *threads[8]={0};
 addrlist *final_scope[8];
-int pid, thread, type, value;
+pid_t pid;
+int thread, type, value;
 char cmd[10], second[20], datatype[10];
 char cmdbuf[1024];
 
@@ -204,16 +209,13 @@ int search(){
 	sscanf(second,"%d",&thread);
 	tmp=threads[thread];
 	
-	char str[1024], path[512];
-	FILE *fp;
-	char procmap[20], null[10];
-	int start, end;
-	sprintf(procmap,"procmap %d",pid);
-	fp=popen(procmap,"r");
-	if(fp==0){
-		exit(1);
-	}
-	int ptr=0;
+	struct kinfo_vmentry *freep, *kve;
+	int i,cnt;
+	void *start, *end;
+
+	freep = kinfo_getvmmap(pid, &cnt);
+
+	void *ptr=NULL;
 	if(type==TP_INT8){
 		target.int8=value;
 		printf("Searching int8 %d:",target.int8);
@@ -275,11 +277,11 @@ int search(){
 			scopesearch(type);
 		}
 	}
-	fclose(fp);
+	free(freep);
 }
 
 int set(){
-	int addr;
+	void *addr;
 	block data;
 	sscanf(second,"%p",&addr);
 	if(type==TP_INT8){
@@ -309,7 +311,7 @@ int set(){
 	return 0;
 }
 
-int addlist(int addr, block data){
+int addlist(void *addr, block data){
 	addrlist *tmp;
 	if(threads[thread]==0){
 		final_scope[thread]=threads[thread]=malloc(sizeof(addrlist));
