@@ -1,14 +1,3 @@
-/*
-# ./meniac `pidof dummy`
-meniac> search 0 int32 54321
-Searching integer 54321:(omni)
-(0x8048508)     54321
-(0x8049508)     54321
-(0xbfbfe3f4)    54321
-(0xbfbfea64)    54321
-meniac> set 0x8048508 int32 12345
-meniac> quit
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
