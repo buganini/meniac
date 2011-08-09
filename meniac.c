@@ -1,13 +1,13 @@
 /*
-# ./bigwet `pidof dummy`
-bigwet> search 0 int32 54321
+# ./meniac `pidof dummy`
+meniac> search 0 int32 54321
 Searching integer 54321:(omni)
 (0x8048508)     54321
 (0x8049508)     54321
 (0xbfbfe3f4)    54321
 (0xbfbfea64)    54321
-bigwet> set 0x8048508 int32 12345
-bigwet> quit
+meniac> set 0x8048508 int32 12345
+meniac> quit
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 	while(1){
-		printf("bigwet> ");
+		printf("meniac> ");
 		fgets(cmdbuf,1024,stdin);
 		if(sscanf(cmdbuf,"%s%s%s%d", cmd, second, datatype, &value)==0) continue;
 		if(strcmp("int8",datatype)==0){
